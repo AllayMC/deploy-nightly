@@ -42,18 +42,22 @@ async function run() {
 
 		const token = token_env != "" ? token_env : core.getInput("token", { required: false });
 		const sha = core.getInput("sha", { required: false });
-		const owner_repo = core.getInput("repo", { required: false });
+		const ownerRepo = core.getInput("repo", { required: false });
 		const maxReleases = parseInt(core.getInput("max_releases", { required: false }));
 		const ignoreHash = core.getBooleanInput("ignore_hash", { required: false });
 		const releaseId = core.getInput("release_id", { required: true });
-		let name = core.getInput("asset_name", { required: true });
-		const placeholderStart = name.indexOf("$$");
-		const nameStart = name.substring(0, placeholderStart);
-		const nameEnd = name.substring(placeholderStart + 2);
+		let assetName = core.getInput("asset_name", { required: true });
+		let oldAssetName = core.getInput("old_asset_name", { required: false });
+		if (oldAssetName.length === 0) {
+			oldAssetName = assetName;
+		}
+		const placeholderStart = oldAssetName.indexOf("$$");
+		const nameStart = oldAssetName.substring(0, placeholderStart);
+		const nameEnd = oldAssetName.substring(placeholderStart + 2);
 
 		const octokit = getOctokit(token);
 		const hash = sha.substring(0, 6);
-		const [owner, repo] = owner_repo.split('/');
+		const [owner, repo] = ownerRepo.split('/');
 
 		core.info("Checking previous assets");
 		let assets = await octokit.rest.repos.listReleaseAssets({
@@ -77,7 +81,7 @@ async function run() {
 		let numFound = 0;
 		for (let i = 0; i < assets.data.length; i++) {
 			const asset = assets.data[i];
-			if (asset.name == name) {
+			if (asset.name == oldAssetName) {
 				// not commit hash or date in filename, always force upload here
 				existingAssetNameId = asset.id;
 			} else if (asset.name.startsWith(nameStart) && asset.name.endsWith(nameEnd)) {
@@ -98,7 +102,7 @@ async function run() {
 		let now = new Date();
 		let date = now.getUTCFullYear().toString() + pad2((now.getUTCMonth() + 1).toString()) + pad2(now.getUTCDate().toString());
 
-		name = name.replace("$$", date + "-" + hash);
+		assetName = assetName.replace("$$", date + "-" + hash);
 
 		if (existingAssetNameId !== undefined) {
 			core.info("Deleting old asset of same name first");
@@ -109,8 +113,8 @@ async function run() {
 			});
 		}
 
-		core.info("Uploading asset as file " + name);
-		let url = await uploadAsset(octokit, name);
+		core.info("Uploading asset as file " + assetName);
+		let url = await uploadAsset(octokit, assetName);
 
 		core.info("Deleting " + toDelete.length + " old assets");
 		for (let i = 0; i < toDelete.length; i++) {
@@ -124,7 +128,7 @@ async function run() {
 
 		core.setOutput("uploaded", "yes");
 		core.setOutput("url", url);
-		core.setOutput("asset_name", name);
+		core.setOutput("asset_name", assetName);
 	} catch (error) {
 		core.setFailed(error.message);
 	}

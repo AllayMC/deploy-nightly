@@ -33,6 +33,7 @@ jobs:
           release_id: 20717582 # same as above (id can just be taken out the upload_url, it's used to find old releases)
           asset_path: ./myapp.zip # path to archive to upload
           asset_name: myapp_windows-nightly-$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+          old_asset_name: myapp_windows-nightly-*.zip # optional, name of the file to delete, and $$ can be used to match multiple characters. If not specified, asset_name will be used to match the old asset file
           asset_content_type: application/zip # required by GitHub API
           max_releases: 7 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
           ignore_hash: true # optional, if there is already a release associated with the repo's current commit, should we go ahead and upload the asset anyway.
